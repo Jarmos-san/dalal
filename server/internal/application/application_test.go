@@ -6,6 +6,8 @@ package application
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"testing"
@@ -13,6 +15,14 @@ import (
 
 	"github.com/Jarmos-san/arthika/server/internal/config"
 )
+
+// newTestLogger returns a logger that discards all output. This ensures tests remain
+// silent and deterministic.
+func newTestLogger() *slog.Logger {
+	return slog.New(
+		slog.NewTextHandler(io.Discard, nil),
+	)
+}
 
 // `TestNew_InitializesApplication` verifies that New correctly initializes the
 // application struct and wires the HTTP server with the provided configuration and
@@ -26,8 +36,9 @@ func TestNew_InitializesApplication(t *testing.T) {
 	}
 
 	handler := http.NewServeMux()
+	logger := newTestLogger()
 
-	app := New(cfg, handler)
+	app := New(cfg, handler, logger)
 
 	if app.Config != cfg {
 		t.Errorf("expected config %+v, got %+v", cfg, app.Config)
@@ -39,6 +50,10 @@ func TestNew_InitializesApplication(t *testing.T) {
 
 	if app.Handler != handler {
 		t.Errorf("expected handler to be set")
+	}
+
+	if app.Logger != logger {
+		t.Errorf("expected logger to be set")
 	}
 
 	if app.Server.Addr != cfg.Addr {
@@ -68,7 +83,8 @@ func TestRunAndShutdown(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	app := New(cfg, mux)
+	logger := newTestLogger()
+	app := New(cfg, mux, logger)
 
 	// Replace server listener manually to control lifecycle
 	app.Server.Addr = ""
@@ -111,7 +127,8 @@ func TestServer_HandlesRequest(t *testing.T) {
 		_, _ = w.Write([]byte("OK"))
 	})
 
-	app := New(cfg, mux)
+	logger := newTestLogger()
+	app := New(cfg, mux, logger)
 
 	go func() {
 		_ = app.Server.Serve(ln)

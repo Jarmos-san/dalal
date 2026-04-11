@@ -7,7 +7,7 @@ package application
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/Jarmos-san/arthika/server/internal/config"
@@ -16,7 +16,8 @@ import (
 // `application` represents the main application container.
 //
 // It holds the runtime configuration, the HTTP server instance and the root HTTP
-// handler. This struct is responsible for managing the lifecycle of the HTTP server.
+// handler, and the structured logger. This type is responsible for managing the
+// lifecycle of the HTTP server and coordinating cross-cutting concerns such as logging.
 type application struct {
 	// Config contains the application configuration values.
 	Config config.Config
@@ -24,15 +25,24 @@ type application struct {
 	// Server is the HTTP server responsible for handling incoming requests.
 	Server *http.Server
 
-	// Handler is hte root HTTP handler used by the server to route requests.
+	// Handler is the root HTTP handler used by the server to route requests.
 	Handler http.Handler
+
+	// Logger is the structured logger used for emitting application-level logs.
+	//
+	// It is expected to be initialised by the caller and injected into the application.
+	// The logger is used for lifecycle events such as startup and shutdown, as well as
+	// other operational logging.
+	Logger *slog.Logger
 }
 
 // `New` constructs and returns a new application instance.
 //
-// It initialises an `http.Server` using the provided configuration and handler. The
-// returned application is ready to be started via the `application.Run` method.
-func New(cfg config.Config, handler http.Handler) *application {
+// It initialises an `http.Server` using the provided configuration and handler, and
+// associates a structured logger for application-level logging.
+//
+// The returned application is ready to be started via the `Run` method.
+func New(cfg config.Config, handler http.Handler, logger *slog.Logger) *application {
 	server := &http.Server{
 		Addr:         cfg.Addr,
 		Handler:      handler,
@@ -45,6 +55,7 @@ func New(cfg config.Config, handler http.Handler) *application {
 		Config:  cfg,
 		Server:  server,
 		Handler: handler,
+		Logger:  logger,
 	}
 }
 
@@ -53,7 +64,7 @@ func New(cfg config.Config, handler http.Handler) *application {
 // It logs the server start event and blocks until the server stops. Any error returned
 // by `ListenAndServer` is propagated to the caller.
 func (a *application) Run() error {
-	log.Printf("server is ready at: http://localhost%s", a.Config.Addr)
+	a.Logger.Info("server started", "addr", a.Config.Addr)
 	return a.Server.ListenAndServe()
 }
 
@@ -63,6 +74,6 @@ func (a *application) Run() error {
 // requests to complete before termination. If the context expires before shutdown
 // completes, an error is returned.
 func (a *application) Shutdown(ctx context.Context) error {
-	log.Print("shutting down...")
+	a.Logger.Info("server shutdown")
 	return a.Server.Shutdown(ctx)
 }

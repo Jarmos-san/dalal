@@ -7,7 +7,6 @@ package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/Jarmos-san/arthika/server/internal/application"
 	"github.com/Jarmos-san/arthika/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/logger"
 )
 
 // `main` initialises and runs the HTTP server.
@@ -32,6 +32,8 @@ func main() {
 	// Load application configuration from environment variables.
 	cfg := config.LoadConfig()
 
+	logger := logger.New(cfg.LogLevel)
+
 	// Initialise the HTTP request multiplexer and register routes.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
@@ -39,7 +41,7 @@ func main() {
 	})
 
 	// Construct the app container with configurations and the handler.
-	app := application.New(cfg, mux)
+	app := application.New(cfg, mux, logger)
 
 	// Create a context that is cancelled on interrupt or kill signals.
 	ctx, stop := signal.NotifyContext(
@@ -52,9 +54,9 @@ func main() {
 	// Start the HTTP server in a seperate goroutine. This allows the `main` goroutine
 	// to listen for shutdown signals
 	go func() {
-		log.Printf("starting server...")
+		logger.Info("starting server")
 		if err := app.Run(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			logger.Error("server startup failed", "error", err.Error())
 		}
 	}()
 
@@ -67,8 +69,8 @@ func main() {
 
 	// Attempt a graceful shutdown of the server.
 	if err := app.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("server shutdown failed: %v", err)
+		logger.Error("server shutdown failed", "error", err.Error())
 	}
 
-	log.Printf("server shutdown completed gracefully...")
+	logger.Info("server shutdown completed gracefully")
 }

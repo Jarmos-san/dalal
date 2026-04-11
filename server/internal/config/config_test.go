@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jarmos-san/dalal/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/config"
 )
 
 // TestLoadConfig_Defaults() verifies that `config.LoadConfig()` returns the expected

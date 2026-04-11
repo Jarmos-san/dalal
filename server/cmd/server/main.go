@@ -13,8 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Jarmos-san/dalal/server/internal/application"
-	"github.com/Jarmos-san/dalal/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/application"
+	"github.com/Jarmos-san/arthika/server/internal/config"
 )
 
 // `main` initialises and runs the HTTP server.

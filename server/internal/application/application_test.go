@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Jarmos-san/dalal/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/config"
 )
 
 // `TestNew_InitializesApplication` verifies that New correctly initializes the

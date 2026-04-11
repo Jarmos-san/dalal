@@ -10,7 +10,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/Jarmos-san/dalal/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/config"
 )
 
 // `application` represents the main application container.

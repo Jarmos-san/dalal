@@ -30,6 +30,10 @@ type Config struct {
 	// IdleTimeout is the maximum amount of time to wait for the next request when
 	// keep-alives are enabled.
 	IdleTimeout time.Duration
+
+	// LogLevel defines the minimum severity of logs emitted by the application logger.
+	// Supported values include "debug", "info", "warn", and "error".
+	LogLevel string
 }
 
 // getEnv() retrieves the value of the environment variable identified by key. If the
@@ -70,6 +74,7 @@ func getEnvDuration(key string, fallback time.Duration) (time.Duration, error) {
 //   - READ_TIMEOUT: request read timeout (e.g., "10s")
 //   - WRITE_TIMEOUT: response write timeout (e.g., "10s")
 //   - IDLE_TIMEOUT: keep-alive idle timeout (e.g., "60s")
+//   - LOG_LEVEL: the log level (e.g., "debug", "info", "warn", "error")
 //
 // If an environment variable is not set or contains an invalid value, the corresponding
 // default value is used instead.
@@ -79,17 +84,20 @@ func LoadConfig() Config {
 		ReadTimeout:  time.Duration(10 * time.Second),
 		WriteTimeout: time.Duration(10 * time.Second),
 		IdleTimeout:  time.Duration(10 * time.Second),
+		LogLevel:     "info",
 	}
 
 	addr := getEnv("ADDR", defaultCfg.Addr)
 	readTimeout, _ := getEnvDuration("READ_TIMEOUT", defaultCfg.ReadTimeout)
 	writeTimeout, _ := getEnvDuration("WRITE_TIMEOUT", defaultCfg.WriteTimeout)
 	idleTimeout, _ := getEnvDuration("IDLE_TIMEOUT", defaultCfg.IdleTimeout)
+	logLevel := getEnv("LOG_LEVEL", defaultCfg.LogLevel)
 
 	return Config{
 		Addr:         addr,
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 		IdleTimeout:  idleTimeout,
+		LogLevel:     logLevel,
 	}
 }

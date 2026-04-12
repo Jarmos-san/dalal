@@ -22,6 +22,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  10 * time.Second,
+		LogLevel:     "info",
 	}
 
 	if cfg != defaultCfg {
@@ -36,6 +37,7 @@ func TestLoadConfig_FromEnv(t *testing.T) {
 	t.Setenv("READ_TIMEOUT", "5s")
 	t.Setenv("WRITE_TIMEOUT", "6s")
 	t.Setenv("IDLE_TIMEOUT", "7s")
+	t.Setenv("LOG_LEVEL", "debug")
 
 	cfg := config.LoadConfig()
 
@@ -53,6 +55,10 @@ func TestLoadConfig_FromEnv(t *testing.T) {
 
 	if cfg.IdleTimeout.String() != "7s" {
 		t.Errorf("expected IdleTimeout 7s, got %s", cfg.IdleTimeout)
+	}
+
+	if cfg.LogLevel != "debug" {
+		t.Errorf("expected LogLevel debug, got %s", cfg.LogLevel)
 	}
 }
 
@@ -90,5 +96,9 @@ func TestLoadConfig_PartialOverride(t *testing.T) {
 	if cfg.ReadTimeout != def.ReadTimeout {
 		t.Errorf("expected default ReadTimeout %v, got %v",
 			def.ReadTimeout, cfg.ReadTimeout)
+	}
+
+	if cfg.LogLevel != "info" {
+		t.Errorf("expected default LogLevel info, got %s", cfg.LogLevel)
 	}
 }

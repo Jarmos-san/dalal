@@ -6,3 +6,8 @@ tasks:
   default:
     desc: Display all available commands
     cmd: task --list
+
+  lint:
+    desc: Run linters across the source code.
+    dir: server
+    cmd: golangci-lint run ./...

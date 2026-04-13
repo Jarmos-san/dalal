@@ -1,0 +1,25 @@
+version: "2"
+
+linters:
+  default: all
+  enable:
+    - wsl_v5
+  settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+      case-max-lines: 0
+    depguard:
+      rules:
+        main:
+          allow: ["$gostd"]
+          files: ["internal/*.go"]
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+    - golines

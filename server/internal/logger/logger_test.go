@@ -42,101 +42,91 @@ func newTestLogger(level string, buf *bytes.Buffer) *slog.Logger {
 	}
 
 	handler := slog.NewTextHandler(buf, &slog.HandlerOptions{
-		Level: lvl,
+		Level:       lvl,
+		AddSource:   false,
+		ReplaceAttr: nil,
 	})
 
 	return slog.New(handler)
 }
 
-// TestLogger_LevelFiltering verifies that the logger correctly filters log messages
-// according to the configured severity level.
-//
-// The test suite is table-driven and focuses on behavioral validation:
-//
-//   - Ensures that log messages at or above the configured level are emitted.
-//   - Ensures that log messages below the configured level are suppressed.
-//   - Confirms that invalid level inputs fall back to the default ("info").
-//
-// Instead of inspecting internal logger state, this test captures the logger output
-// and checks whether any log entry was written. This approach reflects real-world
-// usage and aligns with slog's design, where handlers determine emission behavior.
-//
-// Each test case defines:
-//
-//   - level: the configured log level
-//   - logFn: the logging operation to execute
-//   - expectedOutput: whether output is expected to be emitted
-func TestLogger_LevelFiltering(t *testing.T) {
-	tests := []struct {
-		name           string
-		level          string
-		logFn          func(*slog.Logger)
-		expectedOutput bool
-	}{
-		{
-			name:           "debug level allows debug",
-			level:          "debug",
-			logFn:          func(l *slog.Logger) { l.Debug("debug message") },
-			expectedOutput: true,
-		},
-		{
-			name:           "info level supporesses debug",
-			level:          "info",
-			logFn:          func(l *slog.Logger) { l.Debug("debug message") },
-			expectedOutput: false,
-		},
-		{
-			name:  "error level suppresses warn",
-			level: "error",
-			logFn: func(l *slog.Logger) {
-				l.Warn("warn message")
-			},
-			expectedOutput: false,
-		},
-		{
-			name:  "error level allows error",
-			level: "error",
-			logFn: func(l *slog.Logger) {
-				l.Error("error message")
-			},
-			expectedOutput: true,
-		},
-		{
-			name:  "default level is info",
-			level: "invalid",
-			logFn: func(l *slog.Logger) {
-				l.Info("info message")
-			},
-			expectedOutput: true,
-		},
-		{
-			name:  "default level suppresses debug",
-			level: "invalid",
-			logFn: func(l *slog.Logger) {
-				l.Debug("debug message")
-			},
-			expectedOutput: false,
-		},
+// runLoggerTest executes a logger function and asserts whether output was emitted.
+func runLoggerTest(
+	t *testing.T,
+	level string,
+	logFn func(*slog.Logger),
+	expected bool,
+) {
+	t.Helper()
+
+	var buf bytes.Buffer
+
+	logger := newTestLogger(level, &buf)
+
+	logFn(logger)
+
+	got := strings.TrimSpace(buf.String()) != ""
+	if got != expected {
+		t.Fatalf("expected %v, got %v", expected, got)
 	}
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var buf bytes.Buffer
-			logger := newTestLogger(tt.level, &buf)
+func TestLogger_DebugLevel(t *testing.T) {
+	t.Parallel()
 
-			tt.logFn(logger)
+	// debug level allows all logs
+	runLoggerTest(t, "debug",
+		func(l *slog.Logger) { l.Debug("debug message") },
+		true,
+	)
 
-			output := buf.String()
-			gotOutput := strings.TrimSpace(output) != ""
+	runLoggerTest(t, "debug",
+		func(l *slog.Logger) { l.Info("info message") },
+		true,
+	)
+}
 
-			if gotOutput != tt.expectedOutput {
-				t.Fatalf(
-					"expected output: %v, got %v, output: %q",
-					tt.expectedOutput,
-					gotOutput,
-					output,
-				)
-			}
-		})
-	}
+func TestLogger_InfoLevel(t *testing.T) {
+	t.Parallel()
+
+	// info level suppresses debug logs
+	runLoggerTest(t, "info",
+		func(l *slog.Logger) { l.Debug("debug message") },
+		false,
+	)
+
+	runLoggerTest(t, "info",
+		func(l *slog.Logger) { l.Info("info message") },
+		true,
+	)
+}
+
+func TestLogger_ErrorLevel(t *testing.T) {
+	t.Parallel()
+
+	// error level suppresses warnings
+	runLoggerTest(t, "error",
+		func(l *slog.Logger) { l.Warn("warn message") },
+		false,
+	)
+
+	runLoggerTest(t, "error",
+		func(l *slog.Logger) { l.Error("error message") },
+		true,
+	)
+}
+
+func TestLogger_DefaultLevel(t *testing.T) {
+	t.Parallel()
+
+	// invalid level falls back to info
+	runLoggerTest(t, "invalid",
+		func(l *slog.Logger) { l.Info("info message") },
+		true,
+	)
+
+	runLoggerTest(t, "invalid",
+		func(l *slog.Logger) { l.Debug("debug message") },
+		false,
+	)
 }

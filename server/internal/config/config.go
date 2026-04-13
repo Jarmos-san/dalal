@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+// defaultTimeout defines the default duration applied to HTTP server timeouts.
+//
+// It is used as the fallback value for ReadTimeout, WriteTimeout, and IdleTimeout when
+// no explicit configuration is provided. The value is chosen to balance responsiveness
+// and tolerance for slow clients.
+const defaultTimeout = 10 * time.Second
+
 // Config represents the runtime configuration for the application.
 //
 // All fields are populated via environment variables in the `LoadConfig()` function
@@ -54,7 +61,6 @@ func getEnv(key string, fallback string) string {
 func getEnvDuration(key string, fallback time.Duration) (time.Duration, error) {
 	if val, ok := os.LookupEnv(key); ok && val != "" {
 		parsedDuration, err := time.ParseDuration(val)
-
 		if err != nil {
 			return fallback, fmt.Errorf("invalid %s: %w", key, err)
 		}
@@ -65,7 +71,7 @@ func getEnvDuration(key string, fallback time.Duration) (time.Duration, error) {
 	return fallback, nil
 }
 
-// LoadConfig() constructs a Config by reading environment variables and applying
+// LoadConfig constructs a Config by reading environment variables and applying
 // default values where necessary.
 //
 // The following environment variables are supported:
@@ -81,9 +87,9 @@ func getEnvDuration(key string, fallback time.Duration) (time.Duration, error) {
 func LoadConfig() Config {
 	defaultCfg := Config{
 		Addr:         ":8000",
-		ReadTimeout:  time.Duration(10 * time.Second),
-		WriteTimeout: time.Duration(10 * time.Second),
-		IdleTimeout:  time.Duration(10 * time.Second),
+		ReadTimeout:  defaultTimeout,
+		WriteTimeout: defaultTimeout,
+		IdleTimeout:  defaultTimeout,
 		LogLevel:     "info",
 	}
 

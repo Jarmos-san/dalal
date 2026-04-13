@@ -15,6 +15,8 @@ import (
 // TestLoadConfig_Defaults() verifies that `config.LoadConfig()` returns the expected
 // default configuration with no environment variables are set.
 func TestLoadConfig_Defaults(t *testing.T) {
+	t.Parallel()
+
 	cfg := config.LoadConfig()
 
 	defaultCfg := config.Config{
@@ -68,7 +70,7 @@ func TestLoadConfig_InvalidDurationFallsBack(t *testing.T) {
 	t.Setenv("READ_TIMEOUT", "invalid")
 
 	cfg := config.LoadConfig()
-	def := config.Config{
+	def := config.Config{ //nolint:exhaustruct
 		ReadTimeout: 10 * time.Second,
 	}
 
@@ -85,7 +87,7 @@ func TestLoadConfig_PartialOverride(t *testing.T) {
 	t.Setenv("ADDR", ":7000")
 
 	cfg := config.LoadConfig()
-	def := config.Config{
+	def := config.Config{ //nolint:exhaustruct
 		ReadTimeout: 10 * time.Second,
 	}
 

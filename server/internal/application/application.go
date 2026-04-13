@@ -1,4 +1,4 @@
-// Package `application` provides the core application container responsible for wiring
+// Package application provides the core application container responsible for wiring
 // configuration, HTTP handlers and server lifecycle management.
 //
 // It acts as the composition root of the service, coordinating dependencies and
@@ -7,18 +7,20 @@ package application
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/Jarmos-san/arthika/server/internal/config"
 )
 
-// `application` represents the main application container.
+// Application represents the main Application container.
 //
 // It holds the runtime configuration, the HTTP server instance and the root HTTP
 // handler, and the structured logger. This type is responsible for managing the
 // lifecycle of the HTTP server and coordinating cross-cutting concerns such as logging.
-type application struct {
+type Application struct {
 	// Config contains the application configuration values.
 	Config config.Config
 
@@ -36,14 +38,14 @@ type application struct {
 	Logger *slog.Logger
 }
 
-// `New` constructs and returns a new application instance.
+// New constructs and returns a new application instance.
 //
 // It initialises an `http.Server` using the provided configuration and handler, and
 // associates a structured logger for application-level logging.
 //
 // The returned application is ready to be started via the `Run` method.
-func New(cfg config.Config, handler http.Handler, logger *slog.Logger) *application {
-	server := &http.Server{
+func New(cfg config.Config, handler http.Handler, logger *slog.Logger) *Application {
+	server := &http.Server{ //nolint:exhaustruct
 		Addr:         cfg.Addr,
 		Handler:      handler,
 		ReadTimeout:  cfg.ReadTimeout,
@@ -51,7 +53,7 @@ func New(cfg config.Config, handler http.Handler, logger *slog.Logger) *applicat
 		IdleTimeout:  cfg.IdleTimeout,
 	}
 
-	return &application{
+	return &Application{
 		Config:  cfg,
 		Server:  server,
 		Handler: handler,
@@ -59,21 +61,34 @@ func New(cfg config.Config, handler http.Handler, logger *slog.Logger) *applicat
 	}
 }
 
-// `Run` starts the HTTP server and begins listening for incoming requests.
+// Run starts the HTTP server and begins listening for incoming requests.
 //
 // It logs the server start event and blocks until the server stops. Any error returned
 // by `ListenAndServer` is propagated to the caller.
-func (a *application) Run() error {
+func (a *Application) Run() error {
 	a.Logger.Info("server started", "addr", a.Config.Addr)
-	return a.Server.ListenAndServe()
+
+	err := a.Server.ListenAndServe()
+	if err != nil {
+		return fmt.Errorf("listen and serve: %w", err)
+	}
+
+	return nil
 }
 
-// `Shutdown` gracefully stops the HTTP server.
+// Shutdown gracefully stops the HTTP server.
 //
 // It attempts to shutdown the server using the provided context, allowing in-flight
 // requests to complete before termination. If the context expires before shutdown
 // completes, an error is returned.
-func (a *application) Shutdown(ctx context.Context) error {
+func (a *Application) Shutdown(_ context.Context) error {
 	a.Logger.Info("server shutdown")
-	return a.Server.Shutdown(ctx)
+
+	err := a.Server.ListenAndServe()
+	if err != nil &&
+		errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("listen and serve: %w", err)
+	}
+
+	return nil
 }

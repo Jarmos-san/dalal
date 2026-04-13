@@ -1,4 +1,4 @@
-// Package `logger` provides utilities for constructing structured loggers used across
+// Package logger provides utilities for constructing structured loggers used across
 // the application.
 //
 // It exposes a factory function for creating a configured `slog.Logger` instance with a
@@ -10,7 +10,7 @@ import (
 	"os"
 )
 
-// `New` constructs and returns a new `slog.Logger` configured with the provided log
+// New constructs and returns a new `slog.Logger` configured with the provided log
 // level.
 //
 // The level parameter controls the minimum severity of log records that will be
@@ -45,7 +45,11 @@ func New(level string) *slog.Logger {
 
 	handler := slog.NewJSONHandler(
 		os.Stdout,
-		&slog.HandlerOptions{Level: lvl},
+		&slog.HandlerOptions{
+			Level:       lvl,
+			AddSource:   false,
+			ReplaceAttr: nil,
+		},
 	)
 
 	return slog.New(handler)

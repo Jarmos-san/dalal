@@ -7,6 +7,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -17,13 +19,21 @@ import (
 	"github.com/Jarmos-san/arthika/server/internal/logger"
 )
 
+// shutdownTimeout defines the maximum duration allowed for gracefully shutting
+// down the HTTP server.
+//
+// During shutdown, the server stops accepting new connections and waits for in-flight
+// requests to complete. If this timeout is exceeded, the shutdown process is aborted
+// and any remaining connections may be terminated.
+const shutdownTimeout = 5 * time.Second
+
 // `main` initialises and runs the HTTP server.
 //
 // It performs the following steps:
 //   - Loads configurations from environment variables.
 //   - Sets up HTTP routes.
 //   - Constructs the application container.
-//   - Starts the server in a seperate goroutine.
+//   - Starts the server in a separate goroutine.
 //   - Listens for OS signals to trigger graceful shutdown.
 //
 // The server is gracefully shutdown when an interrupt or termination signal is
@@ -36,8 +46,11 @@ func main() {
 
 	// Initialise the HTTP request multiplexer and register routes.
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("OK"))
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte("OK"))
+		if err != nil {
+			logger.Error("failed to write response", slog.String("error", err.Error()))
+		}
 	})
 
 	// Construct the app container with configurations and the handler.
@@ -51,11 +64,14 @@ func main() {
 	)
 	defer stop()
 
-	// Start the HTTP server in a seperate goroutine. This allows the `main` goroutine
+	// Start the HTTP server in a separate goroutine. This allows the `main` goroutine
 	// to listen for shutdown signals
 	go func() {
 		logger.Info("starting server")
-		if err := app.Run(); err != nil && err != http.ErrServerClosed {
+
+		err := app.Run()
+
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("server startup failed", "error", err.Error())
 		}
 	}()
@@ -64,11 +80,12 @@ func main() {
 	<-ctx.Done()
 
 	// Create a timeout-bound context for graceful shutdown.
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 
 	// Attempt a graceful shutdown of the server.
-	if err := app.Shutdown(shutdownCtx); err != nil {
+	err := app.Shutdown(shutdownCtx)
+	if err != nil {
 		logger.Error("server shutdown failed", "error", err.Error())
 	}
 

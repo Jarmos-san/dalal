@@ -8,7 +8,6 @@ package main
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -16,7 +15,9 @@ import (
 
 	"github.com/Jarmos-san/arthika/server/internal/application"
 	"github.com/Jarmos-san/arthika/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/handlers"
 	"github.com/Jarmos-san/arthika/server/internal/logger"
+	"github.com/Jarmos-san/arthika/server/internal/services"
 )
 
 // shutdownTimeout defines the maximum duration allowed for gracefully shutting
@@ -46,12 +47,11 @@ func main() {
 
 	// Initialise the HTTP request multiplexer and register routes.
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
-		_, err := w.Write([]byte("OK"))
-		if err != nil {
-			logger.Error("failed to write response", slog.String("error", err.Error()))
-		}
-	})
+
+	// Register the routes and their handlers
+	userService := services.NewUserService()
+	userHandler := handlers.NewUserHandler(userService, logger)
+	mux.HandleFunc("GET /users/", userHandler.GetUser)
 
 	// Construct the app container with configurations and the handler.
 	app := application.New(cfg, mux, logger)

@@ -13,9 +13,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 
+	"github.com/Jarmos-san/arthika/server/internal/dto"
+	"github.com/Jarmos-san/arthika/server/internal/models"
 	"github.com/Jarmos-san/arthika/server/internal/services"
 )
 
@@ -102,4 +106,90 @@ func (u UserHandler) GetUser(writer http.ResponseWriter, _ *http.Request) {
 			slog.String("error", encodingErr.Error()),
 		)
 	}
+}
+
+func writeJSONAPIError(
+	writer http.ResponseWriter,
+	status int,
+	title, detail string,
+) {
+	writer.Header().Set("Content-Type", "application/vnd.api+json")
+	writer.WriteHeader(status)
+
+	resp := dto.ErrorResponse{
+		Errors: []dto.ErrorObject{
+			{
+				Status: strconv.Itoa(status),
+				Title:  title,
+				Detail: detail,
+			},
+		},
+	}
+
+	err := json.NewEncoder(writer).Encode(resp)
+	if err != nil {
+		msg := fmt.Errorf("failed to encode error response: %w", err)
+		panic(msg)
+	}
+}
+
+// CreateUser ...
+func (u UserHandler) CreateUser(writer http.ResponseWriter, request *http.Request) {
+	request.Body = http.MaxBytesReader(writer, request.Body, http.DefaultMaxHeaderBytes)
+
+	// Step 1: Parse form data
+	formErr := request.ParseForm()
+	if formErr != nil {
+		u.logger.Error("failed to parse form", slog.String("error", formErr.Error()))
+
+		writeJSONAPIError(
+			writer,
+			http.StatusBadRequest,
+			"Invalid Request",
+			"invalid form data",
+		)
+
+		return
+	}
+
+	// Step 2: Extract values
+	username := request.FormValue("username")
+	email := request.FormValue("email")
+	password := request.FormValue("password")
+
+	// Basic validation (don't skip this)
+	if username == "" || email == "" || password == "" {
+		writeJSONAPIError(
+			writer,
+			http.StatusBadRequest,
+			"Missing Data",
+			"missing required fields",
+		)
+
+		return
+	}
+
+	// Step 3: (placeholder) hash password later
+	resp := &models.User{ //nolint:exhaustruct
+		ID:       "123",
+		Username: username,
+		Email:    email,
+	}
+
+	writer.Header().Set("Content-Type", "application/vnd.api+json")
+	writer.WriteHeader(http.StatusCreated)
+
+	encodingErr := json.NewEncoder(writer).Encode(resp)
+	if encodingErr != nil {
+		u.logger.Error(
+			"JSON encoding failed",
+			slog.String("error", encodingErr.Error()),
+		)
+	}
+
+	u.logger.Info(
+		"successfully created new user",
+		slog.String("id", resp.ID),
+		slog.String("username", resp.Username),
+	)
 }

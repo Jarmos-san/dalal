@@ -52,6 +52,7 @@ func main() {
 	userService := services.NewUserService()
 	userHandler := handlers.NewUserHandler(userService, logger)
 	mux.HandleFunc("GET /users/", userHandler.GetUser)
+	mux.HandleFunc("POST /users/new", userHandler.CreateUser)
 
 	// Construct the app container with configurations and the handler.
 	app := application.New(cfg, mux, logger)

@@ -16,6 +16,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/google/uuid"
+
+	"github.com/Jarmos-san/arthika/server/internal/models"
 	"github.com/Jarmos-san/arthika/server/internal/services"
 )
 
@@ -102,4 +105,88 @@ func (u UserHandler) GetUser(writer http.ResponseWriter, _ *http.Request) {
 			slog.String("error", encodingErr.Error()),
 		)
 	}
+}
+
+// CreateUser ...
+func (u UserHandler) CreateUser( //nolint:funlen
+	writer http.ResponseWriter,
+	request *http.Request,
+) {
+	request.Body = http.MaxBytesReader(writer, request.Body, http.DefaultMaxHeaderBytes)
+
+	formErr := request.ParseForm()
+	if formErr != nil {
+		u.logger.Error("failed to parse form", slog.String("error", formErr.Error()))
+
+		http.Error(writer, "form parsing failed", http.StatusInternalServerError)
+
+		return
+	}
+
+	username := request.FormValue("username")
+	email := request.FormValue("email")
+	password := request.FormValue("password")
+
+	if username == "" {
+		u.logger.Error("missing required field", slog.String("name", "username"))
+
+		http.Error(
+			writer,
+			"missing required field: 'username'",
+			http.StatusUnprocessableEntity,
+		)
+
+		return
+	}
+
+	if email == "" {
+		u.logger.Error("missing required field", slog.String("name", "email"))
+
+		http.Error(
+			writer,
+			"missing required field: 'email'",
+			http.StatusUnprocessableEntity,
+		)
+
+		return
+	}
+
+	if password == "" {
+		u.logger.Error("missing required field", slog.String("name", "password"))
+
+		http.Error(
+			writer,
+			"missing required field: 'password'",
+			http.StatusUnprocessableEntity,
+		)
+
+		return
+	}
+
+	resp := &models.User{ //nolint:exhaustruct
+		ID:       uuid.NewString(),
+		Username: username,
+		Email:    email,
+	}
+
+	writer.Header().Set("Content-Type", "application/vnd.api+json")
+	writer.WriteHeader(http.StatusCreated)
+
+	encodingErr := json.NewEncoder(writer).Encode(resp)
+	if encodingErr != nil {
+		u.logger.Error(
+			"JSON encoding failed",
+			slog.String("error", encodingErr.Error()),
+		)
+
+		http.Error(writer, "internal server error", http.StatusInternalServerError)
+
+		return
+	}
+
+	u.logger.Info(
+		"successfully created new user",
+		slog.String("id", resp.ID),
+		slog.String("username", resp.Username),
+	)
 }

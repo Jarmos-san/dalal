@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"os/signal"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/Jarmos-san/arthika/server/internal/application"
 	"github.com/Jarmos-san/arthika/server/internal/config"
+	"github.com/Jarmos-san/arthika/server/internal/dto"
 	"github.com/Jarmos-san/arthika/server/internal/handlers"
 	"github.com/Jarmos-san/arthika/server/internal/logger"
 	"github.com/Jarmos-san/arthika/server/internal/services"
@@ -39,7 +41,7 @@ const shutdownTimeout = 5 * time.Second
 //
 // The server is gracefully shutdown when an interrupt or termination signal is
 // received, allowing in-flight requests to complete wihin a timeout period.
-func main() {
+func main() { //nolint:funlen
 	// Load application configuration from environment variables.
 	cfg := config.LoadConfig()
 
@@ -53,6 +55,31 @@ func main() {
 	userHandler := handlers.NewUserHandler(userService, logger)
 	mux.HandleFunc("GET /users/", userHandler.GetUser)
 	mux.HandleFunc("POST /users/new", userHandler.CreateUser)
+
+	// Temporary scratch handler for experimental requirements only
+	mux.HandleFunc("GET /scratch/", func(writer http.ResponseWriter, _ *http.Request) {
+		writer.Header().Set("Content-Type", "application/vnd.api+json")
+		writer.WriteHeader(http.StatusOK)
+
+		resp := dto.Document[any]{
+			JSONAPI: &dto.JSONAPI{
+				Version: "1.0",
+				Meta:    nil,
+			},
+			Links:    nil,
+			Included: nil,
+			Data:     nil,
+			Errors:   nil,
+			Meta:     nil,
+		}
+
+		err := json.NewEncoder(writer).Encode(resp)
+		if err != nil {
+			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
+
+			return
+		}
+	})
 
 	// Construct the app container with configurations and the handler.
 	app := application.New(cfg, mux, logger)

@@ -1,87 +1,62 @@
 package dto_test
 
 import (
-	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/Jarmos-san/arthika/server/internal/dto"
 )
 
-func TestErrorResponse_JSONSerialization(t *testing.T) {
+func TestJSONAPI_Error_Validate(t *testing.T) {
 	t.Parallel()
 
-	resp := dto.ErrorResponse{
-		Errors: []dto.ErrorObject{
-			{
-				Status: "400",
-				Title:  "Bad Request",
-				Detail: "invalid input",
+	t.Run("valid with title", func(t *testing.T) {
+		t.Parallel()
+		e := dto.ErrorObject{
+			Title: "Invalid request",
+		}
+
+		err := e.Validate()
+		if err != nil {
+			t.Fatalf("expected valid error object, got %v", err)
+		}
+	})
+
+	t.Run("valid with status", func(t *testing.T) {
+		t.Parallel()
+
+		e := dto.ErrorObject{
+			Status: "400",
+		}
+
+		err := e.Validate()
+		if err != nil {
+			t.Fatalf("expected valid error object, got %v", err)
+		}
+	})
+
+	t.Run("invalid empty error object", func(t *testing.T) {
+		t.Parallel()
+
+		e := dto.ErrorObject{}
+
+		err := e.Validate()
+		if err == nil {
+			t.Fatalf("expected validation error, got nil")
+		}
+	})
+
+	t.Run("valid with meta", func(t *testing.T) {
+		t.Parallel()
+
+		e := dto.ErrorObject{
+			Meta: map[string]any{
+				"debug": "info",
 			},
-		},
-	}
+		}
 
-	data, err := json.Marshal(resp)
-	if err != nil {
-		t.Fatalf("failed to marshal error response: %v", err)
-	}
-
-	jsonStr := string(data)
-
-	// Ensure top-level structure
-	if !strings.Contains(jsonStr, `"errors"`) {
-		t.Errorf("expected 'errors' field in JSON, got %s", jsonStr)
-	}
-
-	// Ensure nested fields
-	if !strings.Contains(jsonStr, `"status":"400"`) {
-		t.Errorf("expected status field, got %s", jsonStr)
-	}
-
-	if !strings.Contains(jsonStr, `"title":"Bad Request"`) {
-		t.Errorf("expected title field, got %s", jsonStr)
-	}
-
-	if !strings.Contains(jsonStr, `"detail":"invalid input"`) {
-		t.Errorf("expected detail field, got %s", jsonStr)
-	}
-}
-
-func TestErrorResponse_JSONUnmarshal(t *testing.T) {
-	t.Parallel()
-
-	input := `{
-		"errors": [
-			{
-				"status": "400",
-				"title": "Bad Request",
-				"detail": "invalid input"
-			}
-		]
-	}`
-
-	var resp dto.ErrorResponse
-
-	err := json.Unmarshal([]byte(input), &resp)
-	if err != nil {
-		t.Fatalf("failed to unmarshal error response: %v", err)
-	}
-
-	if len(resp.Errors) != 1 {
-		t.Fatalf("expected 1 error, got %d", len(resp.Errors))
-	}
-
-	errObj := resp.Errors[0]
-
-	if errObj.Status != "400" {
-		t.Errorf("expected status=400, got %s", errObj.Status)
-	}
-
-	if errObj.Title != "Bad Request" {
-		t.Errorf("expected title='Bad Request', got %s", errObj.Title)
-	}
-
-	if errObj.Detail != "invalid input" {
-		t.Errorf("expected detail='invalid input', got %s", errObj.Detail)
-	}
+		err := e.Validate()
+		if err != nil {
+			t.Fatalf("expected valid error object, got %v", err)
+		}
+	})
 }

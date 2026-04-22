@@ -16,9 +16,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/google/uuid"
-
-	"github.com/Jarmos-san/arthika/server/internal/models"
 	"github.com/Jarmos-san/arthika/server/internal/services"
 )
 
@@ -163,10 +160,13 @@ func (u UserHandler) CreateUser( //nolint:funlen
 		return
 	}
 
-	resp := &models.User{ //nolint:exhaustruct
-		ID:       uuid.NewString(),
-		Username: username,
-		Email:    email,
+	resp, serviceErr := u.service.CreateUser(username, []byte(password))
+	if serviceErr != nil {
+		u.logger.Error("failed to create user")
+
+		http.Error(writer, "internal server error", http.StatusInternalServerError)
+
+		return
 	}
 
 	writer.Header().Set("Content-Type", "application/vnd.api+json")
@@ -187,6 +187,6 @@ func (u UserHandler) CreateUser( //nolint:funlen
 	u.logger.Info(
 		"successfully created new user",
 		slog.String("id", resp.ID),
-		slog.String("username", resp.Username),
+		slog.String("username", resp.Name),
 	)
 }

@@ -14,6 +14,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/Jarmos-san/arthika/server/internal/application"
 	"github.com/Jarmos-san/arthika/server/internal/config"
 	"github.com/Jarmos-san/arthika/server/internal/dto"
@@ -61,19 +63,19 @@ func main() { //nolint:funlen
 		writer.Header().Set("Content-Type", "application/vnd.api+json")
 		writer.WriteHeader(http.StatusOK)
 
-		resp := dto.Document[any]{
-			JSONAPI: &dto.JSONAPI{
-				Version: "1.0",
-				Meta:    nil,
+		data := dto.ResourceObject{
+			Type: "user",
+			ID:   uuid.NewString(),
+			Attributes: map[string]any{
+				"name": "John Doe",
 			},
-			Links:    nil,
-			Included: nil,
-			Data:     nil,
-			Errors:   nil,
-			Meta:     nil,
+			Relationships: nil,
+			Links:         nil,
 		}
 
-		err := json.NewEncoder(writer).Encode(resp)
+		newResp := dto.NewSingleDocument(data)
+
+		err := json.NewEncoder(writer).Encode(newResp)
 		if err != nil {
 			http.Error(writer, "Internal Server Error", http.StatusInternalServerError)
 

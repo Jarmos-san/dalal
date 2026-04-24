@@ -4,6 +4,15 @@
 // encapsulate domain logic and remain independent of transport layers.
 package services
 
+import (
+	"fmt"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+
+	"github.com/Jarmos-san/arthika/server/internal/dto"
+)
+
 // User represents a basic user entity exposed by the service layer.
 //
 // This struct is intentionally minimal but can be extended with additional
@@ -23,6 +32,7 @@ type UserService interface {
 	//   - User: the retrieved user object
 	//   - error: non-nil if retrieval fails
 	GetUser() (User, error)
+	CreateUser(name string, password string) (dto.CreateUser, error)
 }
 
 // userService is a concrete implementation of UserService.
@@ -50,5 +60,21 @@ func NewUserService() *userService { //nolint:revive
 func (s userService) GetUser() (User, error) {
 	return User{
 		Name: "John Doe",
+	}, nil
+}
+
+// CreateUser ...
+func (s userService) CreateUser(name string, password string) (dto.CreateUser, error) {
+	userID := uuid.NewString()
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return dto.CreateUser{}, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	return dto.CreateUser{
+		ID:           userID,
+		Name:         name,
+		PasswordHash: string(hash),
 	}, nil
 }

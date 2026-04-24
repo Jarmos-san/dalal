@@ -160,7 +160,7 @@ func (u UserHandler) CreateUser( //nolint:funlen
 		return
 	}
 
-	resp, serviceErr := u.service.CreateUser(username, []byte(password))
+	resp, serviceErr := u.service.CreateUser(username, password)
 	if serviceErr != nil {
 		u.logger.Error("failed to create user")
 
@@ -188,5 +188,6 @@ func (u UserHandler) CreateUser( //nolint:funlen
 		"successfully created new user",
 		slog.String("id", resp.ID),
 		slog.String("username", resp.Name),
+		slog.String("password", resp.PasswordHash),
 	)
 }

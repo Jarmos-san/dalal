@@ -32,7 +32,7 @@ type UserService interface {
 	//   - User: the retrieved user object
 	//   - error: non-nil if retrieval fails
 	GetUser() (User, error)
-	CreateUser(name string, password []byte) (dto.CreateUser, error)
+	CreateUser(name string, password string) (dto.CreateUser, error)
 }
 
 // userService is a concrete implementation of UserService.
@@ -64,10 +64,10 @@ func (s userService) GetUser() (User, error) {
 }
 
 // CreateUser ...
-func (s userService) CreateUser(name string, password []byte) (dto.CreateUser, error) {
+func (s userService) CreateUser(name string, password string) (dto.CreateUser, error) {
 	userID := uuid.NewString()
 
-	password, err := bcrypt.GenerateFromPassword(password, bcrypt.DefaultCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return dto.CreateUser{}, fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -75,6 +75,6 @@ func (s userService) CreateUser(name string, password []byte) (dto.CreateUser, e
 	return dto.CreateUser{
 		ID:           userID,
 		Name:         name,
-		PasswordHash: string(password),
+		PasswordHash: string(hash),
 	}, nil
 }

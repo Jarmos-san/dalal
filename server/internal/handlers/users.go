@@ -191,3 +191,49 @@ func (u UserHandler) CreateUser( //nolint:funlen
 		slog.String("password", resp.PasswordHash),
 	)
 }
+
+// LoginUser ...
+func (u UserHandler) LoginUser(writer http.ResponseWriter, request *http.Request) {
+	username := request.FormValue("username")
+	password := request.FormValue("password")
+
+	if username == "" {
+		u.logger.Error("missing required field", slog.String("username", "username"))
+		// TODO: Use an appropriate JSON:API-compliant error object here
+		http.Error(
+			writer,
+			"missing required field: username",
+			http.StatusUnprocessableEntity,
+		)
+
+		return
+	}
+
+	if password == "" {
+		u.logger.Error("missing required field", slog.String("password", "password"))
+		// TODO: Use an appropriate JSON:API-compliant error object here
+		http.Error(
+			writer,
+			"missing required field: password",
+			http.StatusUnprocessableEntity,
+		)
+
+		return
+	}
+
+	writer.Header().Set("Content-Type", "appplication/vnd.api+json")
+	writer.WriteHeader(http.StatusOK)
+
+	resp := struct {
+		Username string `json:"message"`
+		Password string `json:"-"`
+	}{
+		Username: username,
+		Password: password,
+	}
+
+	encodingErr := json.NewEncoder(writer).Encode(resp)
+	if encodingErr != nil {
+		http.Error(writer, "failed to encode to JSON", http.StatusInternalServerError)
+	}
+}

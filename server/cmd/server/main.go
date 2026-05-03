@@ -57,6 +57,7 @@ func main() { //nolint:funlen
 	userHandler := handlers.NewUserHandler(userService, logger)
 	mux.HandleFunc("GET /users/", userHandler.GetUser)
 	mux.HandleFunc("POST /users/register", userHandler.CreateUser)
+	mux.HandleFunc("POST /login", userHandler.LoginUser)
 
 	// Temporary scratch handler for experimental requirements only
 	mux.HandleFunc("GET /scratch/", func(writer http.ResponseWriter, _ *http.Request) {
